@@ -1,6 +1,5 @@
 from socket import *
 import json, time, select, sys
-from tabnanny import check
 import cv2
 import numpy as np
 
