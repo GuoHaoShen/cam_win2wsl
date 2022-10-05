@@ -2,7 +2,13 @@ from socket import *
 import json, time, select, sys
 import cv2
 import numpy as np
+import rospy
+from std_msgs.msg import Header
+from sensor_msgs.msg import Image
+from cv_bridge import CvBridge , CvBridgeError
 
+BUFF_LEN     = 400                   # 最大报文长度
+SERVER_ADDR  = ("172.16.19.207", 18000)  # 指明服务端地址,需要改为自己的IP地址
 
 def check_link():
     '''检查是否连接成功'''
@@ -30,8 +36,9 @@ def check_link():
         sys.exit()
 
 if __name__ == '__main__':
-    BUFF_LEN     = 400                   # 最大报文长度
-    SERVER_ADDR  = ("172.18.195.59", 18000)  # 指明服务端地址
+
+    rospy.init_node('camera_node', anonymous=True) #定义节点
+    image_pub=rospy.Publisher('image_raw', Image, queue_size = 1) #定义话题
 
     # 创建 UDP Socket
     UDP_socket = socket(AF_INET, SOCK_DGRAM)
@@ -42,7 +49,7 @@ if __name__ == '__main__':
     check_link()
 
     timeStart = 0
-    while True:
+    while not rospy.is_shutdown():
         data = None
         try:
             ready = select.select([UDP_socket], [], [], 0.1)
@@ -50,7 +57,7 @@ if __name__ == '__main__':
                 data, _ = UDP_socket.recvfrom(921600)
             #print("recv data succcess!")
             receive_data = np.frombuffer(data, dtype='uint8')
-            r_img = cv2.imdecode(receive_data, 1)
+            img = cv2.imdecode(receive_data, 1)
 
             try:
                 print("fps of recv data: ",1.0/(time.time()-timeStart))
@@ -59,8 +66,19 @@ if __name__ == '__main__':
                 time.sleep(0.2)
             timeStart = time.time()
 
-            cv2.putText(r_img, "client", (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
-            cv2.imshow('client', r_img)
+            cv2.putText(img, "client", (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
+            cv2.imshow('client', img)
+
+            ros_frame = Image() 
+            header = Header(stamp = rospy.Time.now())
+            header.frame_id = "Camera"
+            ros_frame.header=header
+            ros_frame.width = 640
+            ros_frame.height = 480
+            ros_frame.encoding = "bgr8"
+            ros_frame.step = 1920
+            ros_frame.data = np.array(img).tostring() #图片格式转换
+            image_pub.publish(ros_frame) #发布消息
 
         except Exception as e:
             print(e)
@@ -72,3 +90,4 @@ if __name__ == '__main__':
 
     UDP_socket.close()
     cv2.destroyAllWindows()
+    print("quit successfully!")
