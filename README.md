@@ -18,6 +18,8 @@ ubuntu20.04
 在window打开命令行，输入ipconfig查看本机IP地址
 进入cam_wsl_client.py，将SERVER_ADDR变量中IP地址改为自己的的IP地址
 
+该分支提供ros功能包
+
 window端运行cam_win_server.py
 
-ubuntu端运行cam_wsl_client.py
+ubuntu端运行 rosrun can_win2wsl cam_wsl_client.py 
